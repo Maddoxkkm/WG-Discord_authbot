@@ -1,10 +1,7 @@
 const request = require('request');
 
-//require WebHook for logging
-const SerbLog = require('./serblog');
-
 //require SerBot Details
-const SerBotDetails = require('./serbot_details');
+const errors = require('./errors.js');
 
 /**
  * request (copied from https://stackoverflow.com/questions/38428027/why-await-is-not-working-for-node-request-module)
@@ -40,9 +37,10 @@ function apiValidation(data){
         } else {
             let response = {
                 response: data,
-                error: SerBotDetails.ErrorArray.WG_api_Error
+                error: errors.WG_api_Error
             };
             reject(response)
+
         }
     })
 }
@@ -62,7 +60,7 @@ async function wgApiCall(url){
                 if(x === apiTries - 1){
                     reject(error)
                 } else {
-                    SerbLog(`Retrying WG API call due to API returned Error Array`)
+                    console.log(`Retrying WG API call due to API returned Error Array`)
                 }
             }
         }

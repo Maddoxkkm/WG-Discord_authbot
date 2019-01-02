@@ -1,5 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 token.json
+.idea/
 .idea/WGVerificationBot.iml
 .idea/inspectionProfiles/
 .idea/jsLibraryMappings.xml
@@ -7,4 +8,5 @@ token.json
 .idea/modules.xml
 .idea/workspace.xml
 node_modules/
+data/
 
