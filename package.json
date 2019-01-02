@@ -1,0 +1,17 @@
+{
+  "name": "wgverificationbot",
+  "version": "1.0.0",
+  "description": "A bot prototype for Player verification for Discord for Wargaming titles",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite-pool": "github:eslachance/better-sqlite-pool",
+    "discord.js": "^11.4.2",
+    "enmap": "^4.6.0",
+    "request": "^2.88.0"
+  }
+}
