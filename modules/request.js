@@ -24,6 +24,20 @@ function Request(url){
     });
 }
 
+function Post(obj){
+    return new Promise(function (resolve, reject) {
+        request.post(obj, function (error, res, body) {
+            //console.log('error:', error);
+            //console.log('statusCode:', response && response.statusCode);
+            //console.log('body:', body);
+            if (!error && res.statusCode === 200) {
+                resolve(body);
+            } else {
+                reject(error);
+            }
+        });
+    });
+}
 
 /**
  *
@@ -68,5 +82,6 @@ async function wgApiCall(url){
     })
 }
 
+exports.Post = Post;
 exports.Request = Request;
 exports.wgApiCall = wgApiCall;

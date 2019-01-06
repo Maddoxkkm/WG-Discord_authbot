@@ -15,19 +15,6 @@ function players(realm, id){
             //1st call for overview
             const overview = (await request.WGApiCall(`${realm.apiDomain}/wotb/account/info/?application_id=${token}&language=en&account_id=${id}&fields=-statistics.clan%2C+-statistics.frags%2C+-private`)).data[id];
             const overviewStats = overview.statistics.all;
-            let processedOverview = {
-                ign: overview.nickname,
-                acc_id: overview.account_id,
-                raw: {
-                    overview: overview
-                },
-                processed: {
-                    created: new Date(overview.created_at*1000).toLocaleDateString(),
-                    lastBattleTime: overview.last_battle_time*1000,
-                    battles: overviewStats.battles
-                }
-
-            }
         } catch (e){
             reject(e)
         }

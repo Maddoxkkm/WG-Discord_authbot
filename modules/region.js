@@ -8,28 +8,32 @@ const region = {
         apiDomain: "http://api.wotblitz.com",
         shortServerName: "NA",
         portalPage: "http://wotblitz.com",
-        mainLanguage: "en"
+        mainLanguage: "en",
+        toplevelDomain: "com"
     },
     ASIA:{
-        serverName: "South-East Asia",
+        serverName: "South-East Asia Server",
         apiDomain: "http://api.wotblitz.asia",
         shortServerName: "SEA",
         portalPage: "http://wotblitz.asia",
-        mainLanguage: "en"
+        mainLanguage: "en",
+        toplevelDomain: "asia"
     },
     EU:{
         serverName: "European Server",
         apiDomain: "http://api.wotblitz.eu",
         shortServerName: "EU",
         portalPage: "http://wotblitz.eu",
-        mainLanguage: "en"
+        mainLanguage: "en",
+        toplevelDomain: "eu"
     },
     RU:{
         serverName: "Russian Server",
         apiDomain: "http://api.wotblitz.ru",
         shortServerName: "RU",
         portalPage: "http://wotblitz.ru",
-        mainLanguage: "ru"
+        mainLanguage: "ru",
+        toplevelDomain: "ru"
     }
 };
 
