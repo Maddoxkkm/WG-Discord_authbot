@@ -12,9 +12,9 @@ const region = {
         toplevelDomain: "com"
     },
     ASIA:{
-        serverName: "South-East Asia Server",
+        serverName: "Asia Server",
         apiDomain: "http://api.wotblitz.asia",
-        shortServerName: "SEA",
+        shortServerName: "ASIA",
         portalPage: "http://wotblitz.asia",
         mainLanguage: "en",
         toplevelDomain: "asia"

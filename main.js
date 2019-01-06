@@ -48,7 +48,7 @@ function convertMS(ms){
     temp = Math.floor(temp / 24);
     let days = temp;
 
-    if(days !== 0){
+    if(days > 0){
         if(days === 1){
             timeArray.push("1 Day")
         } else {
@@ -56,7 +56,7 @@ function convertMS(ms){
         }
     }
 
-    if(hrs !== 0){
+    if(hrs > 0){
         if(hrs === 1){
             timeArray.push("1 Hour")
         } else {
@@ -64,7 +64,7 @@ function convertMS(ms){
         }
     }
 
-    if(min !== 0){
+    if(min > 0){
         if(min === 1){
             timeArray.push("1 Minute")
         } else {
@@ -72,7 +72,7 @@ function convertMS(ms){
         }
     }
 
-    if(sec !== 0){
+    if(sec > 0){
         if(days === 1){
             timeArray.push("1 Second")
         } else {
@@ -82,6 +82,21 @@ function convertMS(ms){
     return timeArray.join(", ");
 }
 
+function serverShortNametoRegion(serverShortName){
+    switch(serverShortName){
+        case region.NA.shortServerName:
+            return region.NA;
+        case region.EU.shortServerName:
+            return region.EU;
+        case region.ASIA.shortServerName:
+            return region.ASIA;
+        case region.RU.shortServerName:
+            return region.RU;
+        default:
+            throw "Invalid Region";
+    }
+}
+
 const commands = [
     {
         name: "Identity Verification command",
@@ -89,6 +104,9 @@ const commands = [
         description: "Used to link your Wargaming to your Discord account.",
         do: function(message, args){
             sendVerification(message.author)
+        },
+        permission: function(guildUser){
+
         }
     }
 ];
@@ -104,38 +122,44 @@ authBot.on('ready', function(){
     }
 
     http.createServer(async function (req, res) {
-                    try {
-                        //Return the url part of the request object:
-                        const parsed = url.parse(req.url, true);
-                        const uriArray = parsed.pathname.split('/').filter(x => x !== '');
-                        if(uriArray.length === 3 && uriArray[0] === "regPlayer"){
-                            // known this is for playerreg, we can continue to check the region,
-                            let realm;
-                            switch(uriArray[1]){
-                                case region.NA.shortServerName: realm = region.NA; break;
-                                case region.EU.shortServerName: realm = region.EU; break;
-                                case region.ASIA.shortServerName: realm = region.ASIA; break;
-                                case region.RU.shortServerName: realm = region.RU; break;
-                                default: throw "Invalid Region";
-                            }
+        try {
+            //Return the url part of the request object:
+            const parsed = url.parse(req.url, true);
+            const uriArray = parsed.pathname.split('/').filter(x => x !== '');
+            if(uriArray.length === 3 && uriArray[0] === "regPlayer"){
+                // known the uri is for regPlayer, we can continue to check the region,
+                const realm = serverShortNametoRegion(uriArray[1]);
 
-                            //got the region, next is to grab the Discord ID, and record everything about it
-                            const discordID = uriArray[2].toString();
-                            //See if the user is accessible
-                            const user = authBot.users.get(discordID);
-                            if(user === undefined) throw "Invalid Discord User";
+                //got the region, next is to grab the Discord ID, and record everything about it
+                const discordID = uriArray[2].toString();
+                //See if the user is accessible
+                const targetUser = authBot.users.get(discordID);
+                if(targetUser === undefined) throw "Invalid Discord User";
+                if(parsed.query.status === "error") throw JSON.stringify(parsed.query);
+                //now we've got everything, time to grab the access token (and verify it), not the player ID directly (because the call can be made up and checking validity of token is more secure)
+                const newToken = JSON.parse(await request.Post({url:`https://api.worldoftanks.${realm.toplevelDomain}/wot/auth/prolongate/`, form:{access_token: parsed.query.access_token, application_id: wgapiToken}}));
+                if(newToken.status === "error") throw JSON.stringify(newToken);
+                //Only if the token is confirmed valid (not made up), we then proceed to add the player to the record
+                await playerDB.setPlayer(newToken.data.account_id, realm,discordID);
 
-                            if(parsed.query.status === "error") throw JSON.stringify(parsed.query);
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.write(`You have successfully verified your identity, ${authBot.user.username} will send you a PM to confirm!`)
+                res.end();
 
-                            //now we've got everything, time to grab the access token, not the player ID directly (because the call can be made up and checking validity of token is more secure0
-                            const newToken = JSON.parse(await request.Post({url:`https://api.worldoftanks.${realm.toplevelDomain}/wot/auth/prolongate/`, form:{access_token: parsed.query.access_token, application_id: wgapiToken}}));
-                            if(newToken.status === "error") throw JSON.stringify(newToken);
-
-                            await playerDB.setPlayer(newToken.data.account_id,discordID)
-
-                        } else {
-                            res.writeHead(404, {'Content-Type': 'text/html'});
-                            res.write("ERROR 404 NOT FOUND");
+                targetUser.send('',{
+                    embed: {
+                        color: 3097087,
+                        author: {
+                            name: authBot.user.username,
+                            icon_url: authBot.user.avatarURL
+                        },
+                        title: `${authBot.user.username}'s Vericifation Module`,
+                        description: `You have successfully verified your Wargaming Identity, ${playerDB.mainStorage.getProp(discordID,'ign')}!`,
+                    }});
+                await grantRoles(guild.members.get(discordID))
+            } else {
+                res.writeHead(404, {'Content-Type': 'text/html'});
+                res.write("ERROR 404 NOT FOUND");
             }
             res.end();
         } catch (e) {
@@ -152,15 +176,19 @@ authBot.on('error', error => console.log(`ERROR: ${error}`));
 //When a new member joins the observing server
 authBot.on('guildMemberAdd', guildMember => {
     //ignore any member join that is not part of the guild && has already verified
-    if (guildMember.guildID === targetGuild && playerDB.hasPlayer(guildMember.id)) {
+    if (guildMember.guild.id === targetGuild && !playerDB.hasPlayer(guildMember.id)) {
         sendVerification(guildMember.user)
     }
 });
 
-/**
- *
- * @param {User} user
- */
+function grantRoles(guildMember){
+    return new Promise(function(resolve,reject){
+        //feel free to edit this to grant whatever roles you like
+
+
+    })
+}
+
 function sendVerification(user){
     const guild = authBot.guilds.get(targetGuild);
     user.send('',{
@@ -171,7 +199,7 @@ function sendVerification(user){
                 icon_url: authBot.user.avatarURL
             },
             title: `${authBot.user.username}'s Vericifation Module`,
-            description: `Verify your Wargaming Identity in order to enjoy the full member privilage of **${guild.name}**!\nPlease click on one of the following links corresponding to the server you play on, and login using your credentials! This bot has no access to any info about your account details, as you will be logging in via Wargaming's portals.\n\nAlso, Do **NOT** share this link to anyone else, as they will be able to link their Wargaming account to your Discord ID, which is irreversible!`,
+            description: `Verify your Wargaming Identity in order to enjoy the full member privilage of **${guild.name}**!\nPlease click on one of the following links corresponding to the server you play on, and login using your credentials! This bot has no access to any info about your account details, as you will be logging in via Wargaming's portals.\n\nAlso, Do **NOT** share this link to anyone else, as they will be able to link their Wargaming account to your Discord ID, which is irreversible!\n\nBy Signing in and verifying your identity, you agree to obey the rules and regulations of **${guild.name}**.`,
             fields: [
                 {
                     'name':`${region.NA.serverName}`,
@@ -197,7 +225,7 @@ function sendVerification(user){
 //react to messages
 authBot.on('message', message => {
     console.log(message.content);
-    console.log(message.content.replace(message.mentions.USERS_PATTERN, ''));
+    console.log(message.content.search(message.mentions.USERS_PATTERN));
     if(!message.content.toLowerCase().startsWith(prefix)) return;
     const args = message.content.split(' ');
 

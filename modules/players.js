@@ -13,8 +13,8 @@ function players(realm, id){
     return new Promise(async function(resolve, reject){
         try{
             //1st call for overview
-            const overview = (await request.WGApiCall(`${realm.apiDomain}/wotb/account/info/?application_id=${token}&language=en&account_id=${id}&fields=-statistics.clan%2C+-statistics.frags%2C+-private`)).data[id];
-            const overviewStats = overview.statistics.all;
+            const overview = (await request.wgApiCall(`${realm.apiDomain}/wotb/account/info/?application_id=${token}&language=en&account_id=${id}&fields=-statistics.clan%2C+-statistics.frags%2C+-private`)).data[id];
+            resolve(overview)
         } catch (e){
             reject(e)
         }
@@ -28,9 +28,9 @@ function playerStatsWithIGN(realm, ign, fuzzy){
         try {
             let ignReturn;
             if(fuzzy) {
-                ignReturn = await request.WGApiCall(`${realm.apiDomain}/wotb/account/list/?application_id=${token}&type=startswith&search=${ign}&limit=1`)
+                ignReturn = await request.wgApiCall(`${realm.apiDomain}/wotb/account/list/?application_id=${token}&type=startswith&search=${ign}&limit=1`)
             } else {
-                ignReturn = await request.WGApiCall(`${realm.apiDomain}/wotb/account/list/?application_id=${token}&type=exact&search=${ign}`)
+                ignReturn = await request.wgApiCall(`${realm.apiDomain}/wotb/account/list/?application_id=${token}&type=exact&search=${ign}`)
             }
 
             //Throw when no player is found
@@ -76,12 +76,23 @@ function playerRealm (id){
     return realm.ASIA;
 }
 
-async function playerClan (id){
+async function playerClanWithID (id){
     return new Promise(async function(resolve, reject) {
         try{
             //first get realm
             const realm = playerRealm(id);
-            const clanCheck = await request.WGApiCall(`${realm.apiDomain}/wotb/clans/accountinfo/?application_id=71df07a3f5c764028c167d09eec0cd99&account_id=${id}&fields=clan%2Cjoined_at&extra=clan`);
+            const clanCheck = await playerClan(realm, id);
+            resolve(clanCheck)
+        } catch(err){
+            reject(err)
+        }
+    })
+}
+
+async function playerClan (realm, id){
+    return new Promise(async function(resolve, reject) {
+        try{
+            const clanCheck = (await request.wgApiCall(`${realm.apiDomain}/wotb/clans/accountinfo/?application_id=71df07a3f5c764028c167d09eec0cd99&account_id=${id}&fields=clan%2Cjoined_at&extra=clan`)).data[id];
             resolve(clanCheck)
         } catch(err){
             reject(err)
