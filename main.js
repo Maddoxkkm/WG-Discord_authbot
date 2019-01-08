@@ -106,20 +106,23 @@ const commands = [
             sendVerification(message.author)
         },
         permission: function(guildUser){
-
+            return !playerDB.hasPlayer(guildUser.id);
         }
     }
 ];
 
 authBot.on('ready', function(){
     //verify whether the bot is in the guild or not
-    const guild = authBot.guilds.get(targetGuild);
+        const guild = authBot.guilds.get(targetGuild);
     if(!authBot.guilds.has(targetGuild)) {
         console.log('The Bot will be idle until it has joined the target guild');
     } else {
 
         console.log(`bot is ready to serve in "${guild.name}" with ${guild.memberCount} members`)
     }
+    guild.roles.map(function(value,key,collection){
+        console.log(`${key}, ${value.name}`)
+    });
 
     http.createServer(async function (req, res) {
         try {
@@ -136,15 +139,13 @@ authBot.on('ready', function(){
                 const targetUser = authBot.users.get(discordID);
                 if(targetUser === undefined) throw "Invalid Discord User";
                 if(parsed.query.status === "error") throw JSON.stringify(parsed.query);
+
                 //now we've got everything, time to grab the access token (and verify it), not the player ID directly (because the call can be made up and checking validity of token is more secure)
                 const newToken = JSON.parse(await request.Post({url:`https://api.worldoftanks.${realm.toplevelDomain}/wot/auth/prolongate/`, form:{access_token: parsed.query.access_token, application_id: wgapiToken}}));
                 if(newToken.status === "error") throw JSON.stringify(newToken);
+
                 //Only if the token is confirmed valid (not made up), we then proceed to add the player to the record
                 await playerDB.setPlayer(newToken.data.account_id, realm,discordID);
-
-                res.writeHead(200, {'Content-Type': 'text/html'});
-                res.write(`You have successfully verified your identity, ${authBot.user.username} will send you a PM to confirm!`)
-                res.end();
 
                 targetUser.send('',{
                     embed: {
@@ -154,9 +155,13 @@ authBot.on('ready', function(){
                             icon_url: authBot.user.avatarURL
                         },
                         title: `${authBot.user.username}'s Vericifation Module`,
-                        description: `You have successfully verified your Wargaming Identity, ${playerDB.mainStorage.getProp(discordID,'ign')}!`,
+                        description: `You have successfully verified your Wargaming Identity, ${playerDB.mainStorage.getProp(discordID,'player.nickname')}!`,
                     }});
-                await grantRoles(guild.members.get(discordID))
+                const guildUser = guild.members.get(discordID);
+                ignSet(guildUser);
+                grantRoles(guildUser);
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.write(`You have successfully verified your identity, ${authBot.user.username} will send you a PM to confirm!`);
             } else {
                 res.writeHead(404, {'Content-Type': 'text/html'});
                 res.write("ERROR 404 NOT FOUND");
@@ -181,12 +186,47 @@ authBot.on('guildMemberAdd', guildMember => {
     }
 });
 
-function grantRoles(guildMember){
-    return new Promise(function(resolve,reject){
-        //feel free to edit this to grant whatever roles you like
+async function ignSet(guildMember){
+    try{
+        //if the bot can't do anything to the member then forget about it.
+        if(guildMember.manageable){
+            const memberid = guildMember.id;
+            const reasonString = `${authBot.user.username}'s NickName Update Service`;
+            if(!playerDB.hasPlayer(memberid)) throw "Player does not exist?";
+            const memberData = playerDB.mainStorage.get(memberid);
+            console.log(memberData);
+            const ign = memberData.player.nickname;
+            const clanData = memberData.clan;
+            const server = memberData.region;
+            if(clanData === null){
+                await guildMember.setNickname(`${ign} (${server})`, reasonString);
+            } else {
+                await guildMember.setNickname(`${ign} [${clanData.clan.tag}] (${server})`, reasonString)
+            }
+        }
+    } catch (e) {
+        throw e
+    }
+}
 
+async function grantRoles(guildMember){
+    //feel free to edit this to grant whatever roles you like
+    try {
+        const memberid = guildMember.id;
+        const reasonString = `${authBot.user.username}'s Role Update Service`;
+        if(playerDB.hasPlayer(memberid)){
+            await guildMember.addRole('529865664941391872', reasonString);
+            const playerStats = playerDB.mainStorage.getProp(memberid, "player");
+            const wr = playerStats.statistics.all.wins/playerStats.statistics.all.battles;
+            const battles = playerStats.statistics.all.battles;
+            if(wr>=0.6 && battles>=15000){
+                await guildMember.addRole('529865726492934155', reasonString);
+            }
+        }
+    } catch (e) {
+        throw e
+    }
 
-    })
 }
 
 function sendVerification(user){
@@ -224,9 +264,7 @@ function sendVerification(user){
 
 //react to messages
 authBot.on('message', message => {
-    console.log(message.content);
-    console.log(message.content.search(message.mentions.USERS_PATTERN));
-    if(!message.content.toLowerCase().startsWith(prefix)) return;
+    if(!message.content.toLowerCase().startsWith(prefix) || message.guild === null) return;
     const args = message.content.split(' ');
 
     const finalCommand = commands.reduce(function(prev, cur){
@@ -242,6 +280,9 @@ authBot.on('message', message => {
     },undefined);
 
     if(finalCommand !== undefined) finalCommand.do(message,args)
+
+    // Update their data when they send messages, and their last update is 6 hours ago
+
 
 });
 

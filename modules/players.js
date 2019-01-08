@@ -92,8 +92,10 @@ async function playerClanWithID (id){
 async function playerClan (realm, id){
     return new Promise(async function(resolve, reject) {
         try{
-            const clanCheck = (await request.wgApiCall(`${realm.apiDomain}/wotb/clans/accountinfo/?application_id=71df07a3f5c764028c167d09eec0cd99&account_id=${id}&fields=clan%2Cjoined_at&extra=clan`)).data[id];
-            resolve(clanCheck)
+            const clanCheck = (await request.wgApiCall(`${realm.apiDomain}/wotb/clans/accountinfo/?application_id=${token}&account_id=${id}&fields=clan%2Cjoined_at&extra=clan`)).data[id];
+            console.log(clanCheck);
+            if(clanCheck === null || clanCheck.clan_id === null) resolve(null);
+            else resolve(clanCheck)
         } catch(err){
             reject(err)
         }

@@ -2,7 +2,7 @@
 const Enmap = require('enmap');
 const guildID = require('../token.json').guildID;
 
-const mainStorage = new Enmap(`mainStorage`);
+const mainStorage = new Enmap(/*`mainStorage`*/);
 
 //Import Request
 const request = require('./request.js');
@@ -24,26 +24,19 @@ function setPlayer(wgID, realm, discordID){
             //grab his statistics and also clan details
             const playerStats = await players.playerStats(realm,wgID);
             const playerClan = await players.playerClan(realm, wgID);
-            console.log(playerStats);
-            console.log(playerClan);
             const playerObj = {
                 wgID: wgID,
                 lastUpdated: new Date().getTime(),
-                ign: playerStats.nickname,
                 region: realm.shortServerName,
-                playerStats: playerStats,
+                player: playerStats,
                 clan: playerClan,
                 periodicCheck: { //default values for periodic check and notification
                     check: false,
                     notify: false
                 }
             };
-
-            console.log(playerObj);
-
             mainStorage.set(discordID,playerObj);
-
-            resolve()
+            resolve(true)
         } catch (e) {
             reject (e)
         }
