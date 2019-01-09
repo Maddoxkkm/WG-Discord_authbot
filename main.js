@@ -100,15 +100,28 @@ function serverShortNametoRegion(serverShortName){
 const commands = [
     {
         name: "Identity Verification command",
-        command: ["verify","identity"],
+        command: ["verify"],
         description: "Used to link your Wargaming to your Discord account.",
         do: function(message, args){
-            sendVerification(message.author)
+            sendVerification(message.member)
         },
         permission: function(guildUser){
             return !playerDB.hasPlayer(guildUser.id);
         }
-    }
+    },
+    {
+        name: "Bot Off",
+        command: ["off"],
+        description: "Bot Admin Use only. Restarts Bot",
+        do: function(message, args){
+            //clean persistance for testing phase, remove after bot goes live.
+            playerDB.mainStorage.deleteAll();
+            process.exit(0);
+        },
+        permission: function(guildUser){
+            return guildUser.id === "124146729187672064" || guildUser.id === "76584929063866368"
+        }
+    },
 ];
 
 authBot.on('ready', function(){
@@ -182,7 +195,7 @@ authBot.on('error', error => console.log(`ERROR: ${error}`));
 authBot.on('guildMemberAdd', guildMember => {
     //ignore any member join that is not part of the guild && has already verified
     if (guildMember.guild.id === targetGuild && !playerDB.hasPlayer(guildMember.id)) {
-        sendVerification(guildMember.user)
+        sendVerification(guildMember)
     }
 });
 
@@ -205,7 +218,7 @@ async function ignSet(guildMember){
             }
         }
     } catch (e) {
-        throw e
+        console.log(e);
     }
 }
 
@@ -224,41 +237,29 @@ async function grantRoles(guildMember){
             }
         }
     } catch (e) {
-        throw e
+        console.log(e);
     }
 
 }
 
-function sendVerification(user){
+function sendVerification(guildMember){
     const guild = authBot.guilds.get(targetGuild);
-    user.send('',{
+    console.log(guildMember);
+    guildMember.send('',{
         embed: {
             color: 3097087,
-            author: {
-                name: authBot.user.username,
-                icon_url: authBot.user.avatarURL
-            },
+            author: {name: authBot.user.username, icon_url: authBot.user.avatarURL},
             title: `${authBot.user.username}'s Vericifation Module`,
             description: `Verify your Wargaming Identity in order to enjoy the full member privilage of **${guild.name}**!\nPlease click on one of the following links corresponding to the server you play on, and login using your credentials! This bot has no access to any info about your account details, as you will be logging in via Wargaming's portals.\n\nAlso, Do **NOT** share this link to anyone else, as they will be able to link their Wargaming account to your Discord ID, which is irreversible!\n\nBy Signing in and verifying your identity, you agree to obey the rules and regulations of **${guild.name}**.`,
             fields: [
-                {
-                    'name':`${region.NA.serverName}`,
-                    'value':`[Click Here](https://api.worldoftanks.com/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.NA.shortServerName}/${user.id}/)`
-                },
-                {
-                    'name':`${region.EU.serverName}`,
-                    'value':`[Click Here](https://api.worldoftanks.eu/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.EU.shortServerName}/${user.id}/)`
-                },
-                {
-                    'name':`${region.ASIA.serverName}`,
-                    'value':`[Click Here](https://api.worldoftanks.asia/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.ASIA.shortServerName}/${user.id}/)`
-                },
-                {
-                    'name':`${region.RU.serverName}`,
-                    'value':`[Click Here](https://api.worldoftanks.ru/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.RU.shortServerName}/${user.id}/)`
-                }
+                {'name':`${region.NA.serverName}`, 'value':`[Click Here](https://api.worldoftanks.com/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.NA.shortServerName}/${guildMember.id}/)`},
+                {'name':`${region.EU.serverName}`, 'value':`[Click Here](https://api.worldoftanks.eu/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.EU.shortServerName}/${guildMember.id}/)`},
+                {'name':`${region.ASIA.serverName}`, 'value':`[Click Here](https://api.worldoftanks.asia/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.ASIA.shortServerName}/${guildMember.id}/)`},
+                {'name':`${region.RU.serverName}`, 'value':`[Click Here](https://api.worldoftanks.ru/wot/auth/login/?application_id=${wgapiToken}&redirect_uri=http://${tokens.serverDomainPort}/regPlayer/${region.RU.shortServerName}/${guildMember.id}/)`}
             ]
         }
+    }).catch(() => {
+        guildMember.guild.systemChannel.send(`<@${guildMember.id}> Oi you bastard turn on "Allow direct messages from server members" option!!`)
     })
 }
 
@@ -267,19 +268,22 @@ authBot.on('message', message => {
     if(!message.content.toLowerCase().startsWith(prefix) || message.guild === null) return;
     const args = message.content.split(' ');
 
-    const finalCommand = commands.reduce(function(prev, cur){
+    const finalCommand = commands.reduce(function(acc, cur){
         let equal = false;
-        cur.command.map(function(commandCall){
+
+        cur.command.forEach(function(commandCall){
             if(args[0].toUpperCase() === prefix.toUpperCase() + commandCall.toUpperCase()){
                 equal = true;
             }
         });
-        if(equal === true){
+
+        if(equal){
             return cur;
-        }
+        } else return acc
     },undefined);
 
-    if(finalCommand !== undefined) finalCommand.do(message,args)
+    if(finalCommand !== undefined) finalCommand.do(message, args);
+    else {console.log("didn't catch?")}
 
     // Update their data when they send messages, and their last update is 6 hours ago
 
