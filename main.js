@@ -136,6 +136,9 @@ const commands = [
             return playerDB.hasPlayer(guildUser.id);
         }
     },
+    {
+
+    }
 ];
 
  function personalRating(battles,winrate,survivalrate,hitrate,avgdmg){
@@ -308,10 +311,10 @@ function whois(message){
             const wr = ((rawStats.wins / rawStats.battles) * 100);
             let wrcolor;
             switch (true){
-                case wr < 48: wrcolor = 16777215; break;
-                case wr < 60: wrcolor = 5897984; break;
-                case wr < 70: wrcolor = 47103; break;
-                default: wrcolor = 403519; break;
+                case wr >= 70: wrcolor = 4198512; break;
+                case wr >= 60 && wr < 70: wrcolor = 3764934; break;
+                case wr >= 50 && wr < 60: wrcolor = 5075750; break;
+                default: wrcolor = 16777215; break;
             }
 
             const avgDmg = rawStats.damage_dealt / rawStats.battles;
