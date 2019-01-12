@@ -2,13 +2,15 @@
 const Enmap = require('enmap');
 const guildID = require('../token.json').guildID;
 
-const mainStorage = new Enmap(/*`mainStorage`*/);
+const mainStorage = new Enmap(`mainStorage`);
 
 //Import Request
 const request = require('./request.js');
 
 //Import players requests
 const players = require('./players.js');
+
+const serverShortNametoRegion = require('../main.js').serverShortNametoRegion;
 
 function setPlayer(wgID, realm, discordID){
     return new Promise(async function(resolve,reject) {
@@ -49,6 +51,32 @@ function hasPlayer(discordID){
     return mainStorage.has(discordID);
 }
 
+async function updateProfile(discordID){
+    try {
+        //As this triggered whenever a registered player sends a message, you want to make sure their last update is sometime ago (like 12 hours ago)
+
+        const profile = mainStorage.get(discordID);
+        const period = 43200000;
+        const now = new Date().getTime();
+
+        if(profile.lastUpdated + period < now){
+            const realm = serverShortNametoRegion(profile.region);
+            const wgID = profile.wgID;
+
+            //Obtain new player's stats
+            const newPlayerStats = await players.playerStats(realm,wgID);
+            const newPlayerClan = await players.playerClan(realm, wgID);
+            mainStorage.setProp(discordID, "player", newPlayerStats);
+            mainStorage.setProp(discordID, "clan", newPlayerClan);
+            mainStorage.setProp(discordID, "lastUpdated", new Date().getTime())
+        }
+    } catch (e) {
+        //Ignore the error since when the user sends another message this function will be ran again
+    }
+
+}
+
+exports.updateProfile = updateProfile;
 exports.hasPlayer = hasPlayer;
 exports.setPlayer = setPlayer;
 exports.mainStorage = mainStorage;

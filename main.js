@@ -100,7 +100,8 @@ function serverShortNametoRegion(serverShortName){
 const commands = [
     {
         name: "Identity Verification command",
-        command: ["verify"],
+        command: "verify",
+        usage: `${prefix}${this.command}`,
         description: "Used to link your Wargaming to your Discord account.",
         do: function(message, args){
             sendVerification(message.member)
@@ -111,7 +112,8 @@ const commands = [
     },
     {
         name: "Bot Off",
-        command: ["off"],
+        command: "off",
+        usage: `${prefix}${this.command}`,
         description: "Bot Admin Use only. Restarts Bot",
         do: function(message, args){
             //clean persistance for testing phase, remove after bot goes live.
@@ -122,7 +124,28 @@ const commands = [
             return guildUser.id === "124146729187672064" || guildUser.id === "76584929063866368"
         }
     },
+    {
+        name: "Who-Is Command",
+        command: "whois",
+        usage: `${prefix}${this.command} [Mentions]`,
+        description: "This command is used to obtain a registered player's identity, also the player's cached stats.",
+        do: function(message, args){
+            whois(message)
+        },
+        permission: function(guildUser){
+            return playerDB.hasPlayer(guildUser.id);
+        }
+    },
 ];
+
+ function personalRating(battles,winrate,survivalrate,hitrate,avgdmg){
+    let random1 = 2 / (1 + Math.exp(-(battles) / 3000)) - 1;
+    let random2 = 3000 / (1 + Math.exp(13 - 25 * winrate));
+    let random3 = 1300 / (1 + Math.exp(7 - 22 * survivalrate));
+    let random4 = 700 / (1 + Math.exp(14 - 24 * hitrate));
+    let random5 = random2 + random3 + random4 + avgdmg;
+    return (random1 * random5);
+};
 
 authBot.on('ready', function(){
     //verify whether the bot is in the guild or not
@@ -196,6 +219,9 @@ authBot.on('guildMemberAdd', guildMember => {
     //ignore any member join that is not part of the guild && has already verified
     if (guildMember.guild.id === targetGuild && !playerDB.hasPlayer(guildMember.id)) {
         sendVerification(guildMember)
+    } else {
+        ignSet(guildMember);
+        grantRoles(guildMember);
     }
 });
 
@@ -207,7 +233,7 @@ async function ignSet(guildMember){
             const reasonString = `${authBot.user.username}'s NickName Update Service`;
             if(!playerDB.hasPlayer(memberid)) throw "Player does not exist?";
             const memberData = playerDB.mainStorage.get(memberid);
-            console.log(memberData);
+
             const ign = memberData.player.nickname;
             const clanData = memberData.clan;
             const server = memberData.region;
@@ -244,7 +270,6 @@ async function grantRoles(guildMember){
 
 function sendVerification(guildMember){
     const guild = authBot.guilds.get(targetGuild);
-    console.log(guildMember);
     guildMember.send('',{
         embed: {
             color: 3097087,
@@ -259,35 +284,108 @@ function sendVerification(guildMember){
             ]
         }
     }).catch(() => {
-        guildMember.guild.systemChannel.send(`<@${guildMember.id}> Oi you bastard turn on "Allow direct messages from server members" option!!`)
+        turnOnPMNotify(guildMember)
     })
 }
 
+function turnOnPMNotify(guildMember){
+    guildMember.guild.systemChannel.send(`<@${guildMember.id}>`,{
+        embed: {
+            color: 16711680,
+            author: {name: authBot.user.username, icon_url: authBot.user.avatarURL},
+            title: `${authBot.user.username} is unable to send you DM message!`,
+            description: `<@${guildMember.id}>, please turn on "Allow direct messages from server members" option to enjoy the full privilage of ${authBot.user.username}'s full functionality!`
+        }
+    })
+}
+
+function whois(message){
+    message.mentions.members.map(function(guildMember, id, collection){
+        if(playerDB.hasPlayer(id)){
+            const now = (new Date().getTime() / 86400000);
+            const cachedProfile = playerDB.mainStorage.get(id);
+            const rawStats = cachedProfile.player.statistics.all;
+            const wr = ((rawStats.wins / rawStats.battles) * 100);
+            let wrcolor;
+            switch (true){
+                case wr < 48: wrcolor = 16777215; break;
+                case wr < 60: wrcolor = 5897984; break;
+                case wr < 70: wrcolor = 47103; break;
+                default: wrcolor = 403519; break;
+            }
+
+            const avgDmg = rawStats.damage_dealt / rawStats.battles;
+            const survivalRate = rawStats.survived_battles / rawStats.battles;
+            const hitRate = rawStats.hits / rawStats.shots;
+            const dmgRatio = rawStats.damage_dealt / rawStats.damage_received;
+
+            const pRating = personalRating(rawStats.battles,wr/100,survivalRate,hitRate,avgDmg);
+
+            let replyBlock;
+            if(cachedProfile.clan === null){
+                replyBlock =    `Name      : ${cachedProfile.player.nickname} From ${serverShortNametoRegion(cachedProfile.region).serverName}\n\nDate Of Account Creation: ${new Date(cachedProfile.player.created_at * 1000).toLocaleDateString()}`
+            } else {
+                let clanRole;
+                switch(cachedProfile.clan.role){
+                    case "commander": clanRole = "Commander"; break;
+                    case "private": clanRole = "Private"; break;
+                    case "executive_officer": clanRole = "Executive Officer"; break;
+                }
+                replyBlock =    `Name      : ${cachedProfile.player.nickname} [${cachedProfile.clan.clan.tag}] From ${serverShortNametoRegion(cachedProfile.region).serverName}\nClan      : ${cachedProfile.clan.clan.name} (Joined ${(now - new Date(cachedProfile.clan.joined_at/86400)).toFixed(0)} Days Ago)\nPosition  : ${clanRole}\n\nDate Of Account Creation: ${new Date(cachedProfile.player.created_at * 1000).toLocaleDateString()}`
+
+            }
+
+            message.channel.send(`\`\`\`\n${authBot.user.username}'s Who-Is Player Look-up System \n===========================\n${replyBlock}\n===========================\nNote: If you don't see the embeded message with extra data below this line, please Enable >Embed Links< Permission For ${authBot.user.username}!\`\`\``,{
+                embed: {
+                    color: wrcolor,
+                    author: {name: authBot.user.username, icon_url: authBot.user.avatarURL},
+                    title: `Player's Basic Statistic Overview`,
+                    description: `Below are the basic statistic of <@${id}>, but actual statistics may differ as ${authBot.user.username} uses a cached version of player's data.`,
+                    fields: [
+                        {name: 'WG Personal Rating', value: `**${pRating.toFixed(0)}**`},
+                        {name: 'Battles', value: `**${rawStats.battles}**`, inline: true},
+                        {name: 'Winrate', value: `**${wr.toFixed(2)}%**`, inline: true},
+                        {name: 'Average Damage', value: `**${avgDmg.toFixed(1)}**`, inline: true},
+                        {name: 'Damage Ratio', value: `**${dmgRatio.toFixed(3)}**`, inline: true},
+                        {name: 'Hit Ratio', value: `**${(hitRate * 100).toFixed(2)}%**`, inline: true},
+                        {name: 'Survival Ratio', value: `**${(survivalRate * 100).toFixed(2)}%**`, inline: true},
+                    ],
+                    footer: {icon_url: authBot.user.avatarURL, text: 'Definitely not a copy of SerBot'}}
+            })
+        } else {
+            message.channel.send(``,{
+                embed: {
+                    color: 16711680,
+                    author: {name: authBot.user.username, icon_url: authBot.user.avatarURL},
+                    title: `this player has not been registered on ${authBot.user.username}'s System!`,
+                    description: `As <@${guildMember.id}> have not verified his identity, I do not know his in-game identity. please verify identity before using this command!`
+                }
+            })
+        }
+    })
+}
 //react to messages
 authBot.on('message', message => {
+    // Update their data when they send messages
+    if(playerDB.hasPlayer(message.author.id)){
+        playerDB.updateProfile(message.author.id)
+    }
+
     if(!message.content.toLowerCase().startsWith(prefix) || message.guild === null) return;
     const args = message.content.split(' ');
 
-    const finalCommand = commands.reduce(function(acc, cur){
-        let equal = false;
-
-        cur.command.forEach(function(commandCall){
-            if(args[0].toUpperCase() === prefix.toUpperCase() + commandCall.toUpperCase()){
-                equal = true;
-            }
-        });
-
-        if(equal){
-            return cur;
-        } else return acc
-    },undefined);
+    const finalCommand = commands
+        .filter(cmd => cmd.permission(message.member))
+        .reduce(function(acc, cur){
+            if (args[0].toUpperCase() === prefix.toUpperCase() + cur.command.toUpperCase()){
+                return cur;
+            } else {
+                return acc;
+            }}
+            ,undefined);
 
     if(finalCommand !== undefined) finalCommand.do(message, args);
     else {console.log("didn't catch?")}
-
-    // Update their data when they send messages, and their last update is 6 hours ago
-
-
 });
 
 authBot.login(discordToken)
@@ -295,5 +393,4 @@ authBot.login(discordToken)
     .catch(err => console.log(err));
 
 
-module.exports = authBot;
-
+exports.serverShortNametoRegion = serverShortNametoRegion;
