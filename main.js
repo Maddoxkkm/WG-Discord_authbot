@@ -229,6 +229,7 @@ authBot.on('error', error => console.log(`ERROR: ${error}`));
 //When a new member joins the observing server
 authBot.on('guildMemberAdd', guildMember => {
     //ignore any member join that is not part of the guild && has already verified
+    console.log("hwat?");
     if (guildMember.guild.id === targetGuild && !playerDB.hasPlayer(guildMember.id)) {
         sendVerification(guildMember)
     } else if (guildMember.guild.id === targetGuild && playerDB.hasPlayer(guildMember.id)){
