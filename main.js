@@ -231,7 +231,7 @@ authBot.on('guildMemberAdd', guildMember => {
     //ignore any member join that is not part of the guild && has already verified
     if (guildMember.guild.id === targetGuild && !playerDB.hasPlayer(guildMember.id)) {
         sendVerification(guildMember)
-    } else {
+    } else if (guildMember.guild.id === targetGuild && playerDB.hasPlayer(guildMember.id)){
         ignSet(guildMember);
         grantRoles(guildMember);
     }
