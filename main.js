@@ -135,9 +135,6 @@ const commands = [
         permission: function(guildUser){
             return playerDB.hasPlayer(guildUser.id);
         }
-    },
-    {
-
     }
 ];
 
