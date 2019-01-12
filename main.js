@@ -135,6 +135,18 @@ const commands = [
         permission: function(guildUser){
             return playerDB.hasPlayer(guildUser.id);
         }
+    },
+    {
+        name: "Unlink Command",
+        command: "unlink",
+        usage: `${prefix}${this.command}`,
+        description: "This command is used to unlink a player's identity",
+        do: function(message, args){
+            playerDB.mainStorage.delete(message.author.id)
+        },
+        permission: function(guildUser){
+            return playerDB.hasPlayer(guildUser.id);
+        }
     }
 ];
 

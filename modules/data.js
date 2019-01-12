@@ -26,6 +26,8 @@ function setPlayer(wgID, realm, discordID){
             //grab his statistics and also clan details
             const playerStats = await players.playerStats(realm,wgID);
             const playerClan = await players.playerClan(realm, wgID);
+
+            if(playerStats === null) reject("this player doesn't have any battle records");
             const playerObj = {
                 wgID: wgID,
                 lastUpdated: new Date().getTime(),
