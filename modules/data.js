@@ -79,6 +79,7 @@ async function updateProfile(discordID){
         }
     } catch (e) {
         //Ignore the error since when the user sends another message this function will be ran again
+        console.log(e)
     }
 
 }
