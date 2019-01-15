@@ -57,7 +57,7 @@ async function updateProfile(discordID){
     try {
         //As this triggered whenever a registered player sends a message, you want to make sure their last update is sometime ago (like 12 hours ago)
 
-        const profile = mainStorage.get(discordID);
+        let profile = mainStorage.get(discordID);
         const period = 43200000;
         const now = new Date().getTime();
 
