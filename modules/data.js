@@ -67,9 +67,10 @@ async function updateProfile(discordID){
             const realm = serverShortNametoRegion(profile.region);
             const wgID = profile.wgID;
 
+            console.log(JSON.stringify(profile));
             //Obtain new player's stats
             const newPlayerStats = await players.playerStats(realm,wgID);
-            const newPlayerClan = await players.playerClan(realm, wgID);
+            const newPlayerClan = await players.playerClan(realm,wgID);
             profile.player = newPlayerStats;
             profile.clam = newPlayerClan;
             profile.lastUpdated = new Date().getTime();
