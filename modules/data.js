@@ -70,9 +70,11 @@ async function updateProfile(discordID){
             //Obtain new player's stats
             const newPlayerStats = await players.playerStats(realm,wgID);
             const newPlayerClan = await players.playerClan(realm, wgID);
-            mainStorage.setProp(discordID, "player", newPlayerStats);
-            mainStorage.setProp(discordID, "clan", newPlayerClan);
-            mainStorage.setProp(discordID, "lastUpdated", new Date().getTime())
+            profile.player = newPlayerStats;
+            profile.clam = newPlayerClan;
+            profile.lastUpdated = new Date().getTime();
+            console.log(JSON.stringify(profile));
+            mainStorage.set(discordID,profile)
         }
     } catch (e) {
         //Ignore the error since when the user sends another message this function will be ran again
