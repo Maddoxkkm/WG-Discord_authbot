@@ -150,6 +150,10 @@ const commands = [
     }
 ];
 
+const roles = [
+
+];
+
  function personalRating(battles,winrate,survivalrate,hitrate,avgdmg){
     let random1 = 2 / (1 + Math.exp(-(battles) / 3000)) - 1;
     let random2 = 3000 / (1 + Math.exp(13 - 25 * winrate));

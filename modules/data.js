@@ -61,7 +61,9 @@ async function updateProfile(discordID){
         const period = 43200000;
         const now = new Date().getTime();
 
+        console.log('testtime');
         if(profile.lastUpdated + period < now){
+            console.log('yes');
             const realm = serverShortNametoRegion(profile.region);
             const wgID = profile.wgID;
 
