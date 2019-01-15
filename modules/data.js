@@ -10,7 +10,7 @@ const request = require('./request.js');
 //Import players requests
 const players = require('./players.js');
 
-const serverShortNametoRegion = require('../main.js').serverShortNametoRegion;
+const authBot = require('../main.js');
 
 function setPlayer(wgID, realm, discordID){
     return new Promise(async function(resolve,reject) {
@@ -64,7 +64,7 @@ async function updateProfile(discordID){
         console.log('testtime');
         if(profile.lastUpdated + period < now){
             console.log('yes');
-            const realm = serverShortNametoRegion(profile.region);
+            const realm = authBot.serverShortNametoRegion(profile.region);
             const wgID = profile.wgID;
 
             console.log(JSON.stringify(profile));
